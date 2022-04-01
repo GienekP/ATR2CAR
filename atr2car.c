@@ -18,9 +18,9 @@ typedef unsigned char U8;
 #define OLDADDR 0
 #define NEWADDR 1
 /*--------------------------------------------------------------------*/
-#define CAR512 (512*1024)
-#define CAR256 (256*1024)
 #define CAR128 (128*1024)
+#define CAR256 (256*1024)
+#define CAR512 (512*1024)
 #define CARMAX CAR512
 #define LDRSIZE (8*1024)
 #define ATRMAX (CARMAX-LDRSIZE-128*5)
