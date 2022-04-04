@@ -28,24 +28,30 @@ typedef unsigned char U8;
 #include "starter128.h"
 #include "starter256.h"
 /*--------------------------------------------------------------------*/
-U8 checkATR(const U8 *data)
+void checkATR(const U8 *data, U8 *sector, unsigned int *type)
 {
-	U8 ret=0;
 	if ((data[0]==0x96) && (data[1]==02))
 	{
 		if ((data[4]==0x80) && (data[5]==0x00))
 		{
-			ret=SEC128;
+			*sector=SEC128;
 		}
 		else if ((data[4]==0x00) && (data[5]==0x01))
 		{
-			ret=SEC256;
-		}
+			*sector=SEC256;
+			if (data[2]&0x0F)
+			{
+				*type=3*128;
+			}
+			else
+			{
+				*type=6*128;
+			};
+		};
 	};
-	return ret;
 }
 /*--------------------------------------------------------------------*/
-unsigned int loadATR(const char *filename, U8 *data, U8 *sector)
+unsigned int loadATR(const char *filename, U8 *data, U8 *sector, unsigned int *type)
 {
 	U8 header[16];
 	unsigned int ret=0;
@@ -61,7 +67,7 @@ unsigned int loadATR(const char *filename, U8 *data, U8 *sector)
 		i=fread(header,sizeof(U8),16,pf);
 		if (i==16)
 		{
-			*sector=checkATR(header);
+			checkATR(header,sector,type);
 			if ((*sector==SEC128) || (*sector==SEC256)) 
 			{
 				ret=fread(data,sizeof(U8),ATRMAX,pf);
@@ -225,7 +231,7 @@ unsigned int buildCar128(const U8 *loader, unsigned int stsize,
 /*--------------------------------------------------------------------*/
 unsigned int buildCar256(const U8 *loader, unsigned int stsize, 
                          const U8 *atrdata, unsigned int atrsize, 
-                         U8 *cardata, unsigned int carsize)
+                         U8 *cardata, unsigned int carsize, unsigned int type)
 {
 	unsigned int i,j,sum=0,toend=stsize;
 	for (i=0; i<CARMAX; i++)
@@ -245,9 +251,9 @@ unsigned int buildCar256(const U8 *loader, unsigned int stsize,
 			cardata[j*256+i]=atrdata[(j-1)*128+i];
 		};
 	};
-	for (i=(3*128); i<atrsize; i++)
+	for (i=(type); i<atrsize; i++)
 	{
-		cardata[i+(4*256)-(3*128)]=atrdata[i];
+		cardata[i+(4*256)-(type)]=atrdata[i];
 	};
 	if (toend>LDRSIZE)
 	{
@@ -309,7 +315,8 @@ void atr2car(const char *atrfn, const char *carfn, U8 m, U8 f)
 	unsigned int atrsize;
 	unsigned int carsize;
 	unsigned int sum;
-	atrsize=loadATR(atrfn,atrdata,&sector);
+	unsigned int type;
+	atrsize=loadATR(atrfn,atrdata,&sector,&type);
 	if (atrsize)
 	{
 		printf("Load \"%s\"\n",atrfn);
@@ -326,7 +333,7 @@ void atr2car(const char *atrfn, const char *carfn, U8 m, U8 f)
 			else
 			{
 				printf("Sector: 256\n");
-				sum=buildCar256(starter256_bin,starter256_bin_len,atrdata,atrsize,cardata,carsize);
+				sum=buildCar256(starter256_bin,starter256_bin_len,atrdata,atrsize,cardata,carsize,type);
 			};
 			if (saveCAR(carfn,cardata,sum,flash))
 			{
