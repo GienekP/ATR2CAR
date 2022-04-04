@@ -293,7 +293,8 @@ GOBOOT		lda #$FF	; $012F
 		lda TRIG3
 		sta GINTLK
 		jsr BOOT
-		jmp RESETWM	
+		jmp RESETWM
+		
 ZEROEND
 
 ;-----------------------------------------------------------------------		
