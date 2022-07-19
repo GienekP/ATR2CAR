@@ -17,6 +17,8 @@ typedef unsigned char U8;
 #define SEC256 2
 #define OLDADDR 0
 #define NEWADDR 1
+#define ORYGDOS 0
+#define PATCHDOS 1
 /*--------------------------------------------------------------------*/
 #define CAR128 (128*1024)
 #define CAR256 (256*1024)
@@ -197,6 +199,35 @@ void checkXINT(U8 *atrdata, U8 mode)
 	};
 }
 /*--------------------------------------------------------------------*/
+void repairDOSIId(U8 *atrdata, U8 patch)
+{
+	const unsigned char search[7]={0x20,0xD0,0x1A,0x29,0x20,0xF0,0x02};
+	const unsigned int siz=sizeof(search);
+	unsigned int i,j;
+	for (i=0; i<ATRMAX-siz; i++)
+	{
+		unsigned int test=1;
+		for (j=0; j<siz; j++)
+		{
+			if (atrdata[i+j]!=search[j]) {j=siz; test=0;};
+		};
+		if (test==1)
+		{
+			printf("Find DOS II+/D on 256sectors disk");
+			if (patch==PATCHDOS)
+			{
+				printf(" and add patch.\n");
+				atrdata[i+5]=0;
+			}
+			else
+			{
+				printf("\n");
+			};
+			i=ATRMAX;
+		};
+	};
+}
+/*--------------------------------------------------------------------*/
 unsigned int buildCar128(const U8 *loader, unsigned int stsize, 
                          const U8 *atrdata, unsigned int atrsize, 
                          U8 *cardata, unsigned int carsize)
@@ -305,12 +336,13 @@ U8 saveCAR(const char *filename, U8 *data, unsigned int sum, U8 flash)
 	return ret;
 }
 /*--------------------------------------------------------------------*/
-void atr2car(const char *atrfn, const char *carfn, U8 m, U8 f)
+void atr2car(const char *atrfn, const char *carfn, U8 m, U8 f, U8 d)
 {
 	U8 atrdata[ATRMAX];
 	U8 cardata[CARMAX];
 	U8 mode=m;
 	U8 flash=f;
+	U8 dos=d;
 	U8 sector;
 	unsigned int atrsize;
 	unsigned int carsize;
@@ -333,6 +365,7 @@ void atr2car(const char *atrfn, const char *carfn, U8 m, U8 f)
 			else
 			{
 				printf("Sector: 256\n");
+				repairDOSIId(atrdata,dos);
 				sum=buildCar256(starter256_bin,starter256_bin_len,atrdata,atrsize,cardata,carsize,type);
 			};
 			if (saveCAR(carfn,cardata,sum,flash))
@@ -379,32 +412,57 @@ void modeSel(const char *str, U8 *mode)
 	};
 }
 /*--------------------------------------------------------------------*/
+void patchDOS(const char *str, U8 *dos)
+{
+	if ((str[0]=='-') && ((str[1]=='d') || (str[1]=='D')))
+	{
+		*dos=PATCHDOS;
+	};	
+}
+/*--------------------------------------------------------------------*/
 int main( int argc, char* argv[] )
 {	
 	U8 mode=OLDADDR;
 	U8 flash=FLASHAUTO;
+	U8 dos=ORYGDOS;
 	printf("ATR2CAR - ver: %s\n",__DATE__);
 	if (argc==3)
 	{
-		atr2car(argv[1],argv[2],mode,flash);
+		atr2car(argv[1],argv[2],mode,flash,dos);
 	}
 	else if (argc==4)
 	{
 		modeSel(argv[3],&mode);
 		flashSize(argv[3],&flash);
-		atr2car(argv[1],argv[2],mode,flash);
+		patchDOS(argv[3],&dos);
+		atr2car(argv[1],argv[2],mode,flash,dos);
 	}
 	else if (argc==5)
 	{
 		modeSel(argv[3],&mode);
 		flashSize(argv[3],&flash);
+		patchDOS(argv[3],&dos);
 		modeSel(argv[4],&mode);
 		flashSize(argv[4],&flash);
-		atr2car(argv[1],argv[2],mode,flash);
+		patchDOS(argv[4],&dos);
+		atr2car(argv[1],argv[2],mode,flash,dos);
+	}
+	else if (argc==6)
+	{
+		modeSel(argv[3],&mode);
+		flashSize(argv[3],&flash);
+		patchDOS(argv[3],&dos);
+		modeSel(argv[4],&mode);
+		flashSize(argv[4],&flash);
+		patchDOS(argv[4],&dos);
+		modeSel(argv[5],&mode);
+		flashSize(argv[5],&flash);
+		patchDOS(argv[5],&dos);
+		atr2car(argv[1],argv[2],mode,flash,dos);
 	} else
 	{
 		printf("(c) GienekP\n");
-		printf("use:\natr2car file.atr file.car [-c] [-128|-256|-512]\n");
+		printf("use:\natr2car file.atr file.car [-c] [-d] [-128|-256|-512]\n");
 	};
 	printf("\n");
 	return 0;
