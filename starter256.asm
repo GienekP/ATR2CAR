@@ -296,9 +296,13 @@ ZEROEND
 ;-----------------------------------------------------------------------		
 ; AROUND SIO INTerface
 
-AROUND  clc
-		lda DDEVIC
-		and #$F0
+AROUND  lda DDEVIC
+		cmp #$00
+		bne D0
+		lda #$31
+		sta DDEVIC	
+D0		and #$F0
+		clc
 		adc DUNIT
 		cmp #$31
 		beq D1
@@ -318,15 +322,15 @@ D1		lda #$00
 		beq STATOK
 		cmp #$53
 		bne UNKWCMD		
-        lda #<DVSTAT
-        sta DBUFA
-        lda #>DVSTAT
-        sta DBUFA+1
-        ldx #$03
-CPSTAT  lda D1STAT,x
-        sta DVSTAT,x
-        dex
-        bpl CPSTAT					
+		lda #<DVSTAT
+		sta DBUFA
+		lda #>DVSTAT
+		sta DBUFA+1
+		ldx #$03
+CPSTAT	lda D1STAT,x
+		sta DVSTAT,x
+		dex
+		bpl CPSTAT					
 STATOK	ldy #$01
 		sty DSTATS
 UNKWCMD	jmp RAMPROC+BACK-ZEROCP
