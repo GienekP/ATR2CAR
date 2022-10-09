@@ -202,6 +202,11 @@ TSTMAX	lda VCOUNT
 		sta RAMPROC+LICNT-ZEROCP+1
 VCL2	cmp #$00
 		bne TSTMAX
+		lda #$80
+		sta TMP+1
+		lda #$00
+		sta TMP
+		tay
 		rts
 		
 ;-----------------------------------------------------------------------		
@@ -287,7 +292,15 @@ BACK	lda #$FF
 GOSIO	jsr RAMPROC+BACK-ZEROCP
 		jmp $C95B
 		
-GOBOOT	jsr RAMPROC+BACK-ZEROCP
+GOBOOT	jsr RAMPROC+BACK-ZEROCP	
+		tya
+CLRM	sta (TMP),Y
+		iny
+		bne CLRM
+		inc TMP+1
+		ldx TMP+1
+		cpx #$C0
+		bne CLRM
 		jsr BOOT
 		jmp RESETWM
 		
